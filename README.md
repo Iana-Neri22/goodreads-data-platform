@@ -1,6 +1,7 @@
 # goodreads-data-platform
 
 [![CI](https://github.com/Iana-Neri22/goodreads-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Iana-Neri22/goodreads-data-platform/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11-blue)
 
 Pipeline de dados em camadas (bronze → silver → gold) para análise do dataset de livros do Goodreads, usando DuckDB como warehouse local.
 
