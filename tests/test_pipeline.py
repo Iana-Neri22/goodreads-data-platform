@@ -69,10 +69,7 @@ def test_gold_top_authors(con):
 
 def test_gold_types(con):
     for table in ("top_authors", "top_books", "books_by_language"):
-        cols = {
-            row[0]: row[1]
-            for row in con.execute(f"DESCRIBE gold.{table}").fetchall()
-        }
+        cols = {row[0]: row[1] for row in con.execute(f"DESCRIBE gold.{table}").fetchall()}
         assert cols["loaded_at"] == "TIMESTAMP", (
             f"gold.{table}.loaded_at deveria ser TIMESTAMP, é {cols['loaded_at']}"
         )
@@ -132,6 +129,25 @@ def test_gold_standalone_mode(tmp_path, monkeypatch):
     count = conn.execute("SELECT count(*) FROM gold.top_authors").fetchone()[0]
     conn.close()
     assert count > 0, "gold.top_authors está vazia no modo standalone"
+
+
+def test_gold_exports_exclude_loaded_at(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.duckdb"
+    exports_path = tmp_path / "exports"
+    conn = duckdb.connect(str(db_path))
+    bronze.ingest(conn)
+    silver.transform(conn)
+    conn.close()
+
+    monkeypatch.setattr(gold, "DB_PATH", db_path)
+    monkeypatch.setattr(gold, "EXPORTS_PATH", exports_path)
+    gold.build()
+
+    for table in ("top_authors", "top_books", "books_by_language"):
+        header = (
+            (exports_path / f"{table}.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
+        )
+        assert "loaded_at" not in header, f"{table}.csv contém coluna loaded_at"
 
 
 def test_checks_standalone_mode(tmp_path, monkeypatch):

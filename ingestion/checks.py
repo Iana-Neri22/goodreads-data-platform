@@ -8,18 +8,28 @@ log = logging.getLogger(__name__)
 DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
 
 
-def _check(con, name, query):
-    count = con.execute(query).fetchone()[0]
+def _check(
+    con: duckdb.DuckDBPyConnection,
+    name: str,
+    query: str,
+) -> int:
+    row = con.execute(query).fetchone()
+
+    count: int = row[0] if row is not None else 0
 
     if count > 0:
-        log.warning("  FALHOU %-35s → %d linhas problemáticas", name, count)
+        log.warning(
+            "  FALHOU %-35s → %d linhas problemáticas",
+            name,
+            count,
+        )
     else:
         log.info("  OK     %s", name)
 
     return count
 
 
-def validate(con=None):
+def validate(con: duckdb.DuckDBPyConnection | None = None) -> None:
     close_after = con is None
 
     if con is None:
@@ -97,20 +107,30 @@ def validate(con=None):
         """,
     )
 
-    if failures == 0:
-        log.info("Todas as verificações passaram.")
-    else:
-        log.warning("%d verificação(ões) com problemas.", failures)
+    total = 6
+    passed = total - failures
 
-        raise ValueError(
-            f"Qualidade de dados insuficiente: "
-            f"{failures} verificação(ões) falharam."
+    if failures == 0:
+        log.info("%d/%d verificações passaram.", passed, total)
+    else:
+        log.warning(
+            "%d/%d verificações com problemas.",
+            failures,
+            total,
         )
+
+        msg = f"Qualidade de dados insuficiente: {failures}/{total} verificação(ões) falharam."
+
+        raise ValueError(msg)
 
     if close_after:
         con.close()
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+if __name__ == "__main__":  # pragma: no cover
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+
     validate()

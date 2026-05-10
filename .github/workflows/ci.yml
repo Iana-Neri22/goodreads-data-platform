@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Type check
+        run: mypy ingestion pipeline.py
+
       - name: Executar testes
         run: pytest
 
