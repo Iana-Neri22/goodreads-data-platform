@@ -78,3 +78,25 @@ def test_bronze_rejects_missing_file():
     conn = duckdb.connect(":memory:")
     with pytest.raises(FileNotFoundError):
         bronze.ingest(conn, csv_path="nao_existe.csv")
+
+
+def test_checks_fail_on_invalid_data():
+    conn = duckdb.connect(":memory:")
+    conn.execute("CREATE SCHEMA silver")
+    conn.execute("""
+        CREATE TABLE silver.books (
+            book_id       INTEGER,
+            title         VARCHAR,
+            authors       VARCHAR,
+            average_rating DOUBLE,
+            num_pages     INTEGER,
+            ratings_count INTEGER,
+            publication_date DATE
+        )
+    """)
+    conn.execute("""
+        INSERT INTO silver.books VALUES (1, 'Test', 'Author', 10.0, 100, 50, '2020-01-01')
+    """)
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
