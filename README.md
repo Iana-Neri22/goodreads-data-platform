@@ -66,10 +66,17 @@ Usar um banco DuckDB diferente do padrão:
 python pipeline.py --db outro_warehouse.duckdb
 ```
 
+Controlar o nível de logging:
+
+```bash
+python pipeline.py --log-level WARNING   # silencioso
+python pipeline.py --log-level DEBUG     # verboso
+```
+
 Os argumentos podem ser combinados:
 
 ```bash
-python pipeline.py --input outro.csv --db dev.duckdb --steps bronze,silver
+python pipeline.py --input outro.csv --db dev.duckdb --steps bronze,silver --log-level WARNING
 ```
 
 Os resultados são exportados automaticamente para `data/exports/`:
