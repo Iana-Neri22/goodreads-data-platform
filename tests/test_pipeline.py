@@ -51,6 +51,7 @@ def test_silver_types(con):
     assert cols["average_rating"] == "DOUBLE"
     assert cols["num_pages"] == "INTEGER"
     assert cols["publication_date"] == "DATE"
+    assert "TIMESTAMP" in cols["loaded_at"]
 
 
 def test_quality_checks_pass(con):

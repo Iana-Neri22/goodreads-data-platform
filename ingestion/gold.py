@@ -21,6 +21,7 @@ def build(con=None):
     con.execute("CREATE SCHEMA IF NOT EXISTS gold")
     con.execute("DROP TABLE IF EXISTS gold.top_authors")
     con.execute("DROP TABLE IF EXISTS gold.top_books")
+    con.execute("DROP TABLE IF EXISTS gold.books_by_language")
 
     con.execute("""
         CREATE TABLE gold.top_authors AS
@@ -85,8 +86,37 @@ def build(con=None):
             f'{data["ratings_count"] or 0:,}',
         )
 
+    con.execute("""
+        CREATE TABLE gold.books_by_language AS
+        SELECT
+            language_code,
+            COUNT(*)                        AS total_books,
+            ROUND(AVG(average_rating), 2)   AS avg_rating,
+            SUM(ratings_count)              AS total_ratings
+        FROM silver.books
+        WHERE language_code IS NOT NULL
+        GROUP BY language_code
+        ORDER BY total_books DESC
+    """)
+
+    rows = con.execute("SELECT * FROM gold.books_by_language").fetchall()
+    cols = [d[0] for d in con.execute("DESCRIBE gold.books_by_language").fetchall()]
+
+    log.info("Livros por idioma:")
+    log.info("  %-12s %8s %10s %15s", "Idioma", "Livros", "Avg Rating", "Total Ratings")
+    log.info("  %s", "-" * 50)
+    for row in rows:
+        data = dict(zip(cols, row))
+        log.info(
+            "  %-12s %8d %10.2f %15s",
+            data["language_code"],
+            data["total_books"],
+            data["avg_rating"] or 0,
+            f'{data["total_ratings"] or 0:,}',
+        )
+
     EXPORTS_PATH.mkdir(parents=True, exist_ok=True)
-    for table in ("top_authors", "top_books"):
+    for table in ("top_authors", "top_books", "books_by_language"):
         dest = (EXPORTS_PATH / f"{table}.csv").as_posix()
         con.execute(f"COPY gold.{table} TO '{dest}' (HEADER, DELIMITER ',')")
         log.info("Exportado: %s", dest)
