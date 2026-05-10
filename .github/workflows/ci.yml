@@ -26,3 +26,6 @@ jobs:
 
       - name: Executar testes
         run: pytest
+
+      - name: Smoke test
+        run: python pipeline.py
