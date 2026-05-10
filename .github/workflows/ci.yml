@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Formato
+        run: ruff format --check .
+
       - name: Type check
         run: mypy ingestion pipeline.py
 

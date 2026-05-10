@@ -15,7 +15,7 @@ def _check(
 ) -> int:
     row = con.execute(query).fetchone()
 
-    count: int = row[0] if row is not None else 0
+    count: int = row[0] if row is not None else 0  # pragma: no branch
 
     if count > 0:
         log.warning(

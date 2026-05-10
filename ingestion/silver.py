@@ -48,10 +48,10 @@ def transform(con: duckdb.DuckDBPyConnection | None = None) -> None:
     )
 
     row = con.execute("SELECT COUNT(*) FROM bronze.books_raw").fetchone()
-    total_bronze = row[0] if row is not None else 0
+    total_bronze = row[0] if row is not None else 0  # pragma: no branch
 
     row = con.execute("SELECT COUNT(*) FROM silver.books").fetchone()
-    total_silver = row[0] if row is not None else 0
+    total_silver = row[0] if row is not None else 0  # pragma: no branch
 
     dropped = total_bronze - total_silver
 
@@ -94,7 +94,7 @@ def transform(con: duckdb.DuckDBPyConnection | None = None) -> None:
             """
         ).fetchone()
 
-        if reasons is not None:
+        if reasons is not None:  # pragma: no branch
             log.info(
                 "Motivos: título vazio=%d | id inválido=%d | páginas inválidas=%d",
                 reasons[0],

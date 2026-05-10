@@ -1,6 +1,7 @@
-import duckdb
 import logging
 from pathlib import Path
+
+import duckdb
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def ingest(
     )
 
     row = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()
-    count = row[0] if row is not None else 0
+    count = row[0] if row is not None else 0  # pragma: no branch
     cols = con.execute("DESCRIBE bronze.books_raw").fetchall()
 
     log.info("Ingestão concluída: %d linhas carregadas", count)

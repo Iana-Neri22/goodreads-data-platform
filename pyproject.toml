@@ -1,18 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
 [project]
 name = "goodreads-data-platform"
 version = "0.1.0"
 requires-python = ">=3.11"
+dependencies = ["duckdb==1.5.2"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.3",
+    "pytest-cov==6.1.0",
+    "ruff==0.11.10",
+    "mypy==1.10.0",
+    "pre-commit==4.2.0",
+]
+
+[tool.coverage.run]
+branch = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=ingestion --cov-report=term-missing --cov-fail-under=90"
+addopts = "-v --tb=short --cov=ingestion --cov-report=term-missing --cov-fail-under=100"
 
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_return_any = true
+no_implicit_optional = true
 
 [tool.ruff]
 line-length = 100
+target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ingestion"]
