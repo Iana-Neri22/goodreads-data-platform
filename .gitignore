@@ -209,6 +209,16 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Claude Code
+.claude/
+
+# Pipeline logs
+logs/
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
