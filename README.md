@@ -7,16 +7,19 @@ Pipeline de dados em camadas (bronze → silver → gold) para análise do datas
 ```
 goodreads-data-platform/
 ├── data/
-│   └── books.csv          # Dataset fonte
+│   ├── books.csv              # Dataset fonte
+│   └── exports/               # CSVs exportados (gerados, não versionados)
 ├── ingestion/
-│   ├── bronze.py          # Ingestão bruta do CSV
-│   ├── silver.py          # Limpeza e tipagem dos dados
-│   ├── checks.py          # Verificações de qualidade
-│   └── gold.py            # Agregações analíticas
+│   ├── bronze.py              # Ingestão bruta do CSV
+│   ├── silver.py              # Limpeza e tipagem dos dados
+│   ├── checks.py              # Verificações de qualidade
+│   └── gold.py                # Agregações analíticas
 ├── logs/
-│   └── pipeline.log       # Histórico de execuções
-├── pipeline.py            # Orquestrador do pipeline
-└── warehouse.duckdb       # Banco local (gerado, não versionado)
+│   └── pipeline.log           # Histórico de execuções (gerado, não versionado)
+├── tests/
+│   └── test_pipeline.py       # Testes automatizados
+├── pipeline.py                # Orquestrador do pipeline
+└── warehouse.duckdb           # Banco local (gerado, não versionado)
 ```
 
 ## Camadas
@@ -27,6 +30,7 @@ goodreads-data-platform/
 | Silver | `silver.books` | Dados limpos com tipos corretos, linhas inválidas removidas |
 | Gold | `gold.top_authors` | Autores agregados por total de avaliações |
 | Gold | `gold.top_books` | Livros mais bem avaliados (mín. 1.000 avaliações) |
+| Gold | `gold.books_by_language` | Distribuição de livros por idioma |
 
 ## Instalação
 
@@ -44,8 +48,29 @@ Executar o pipeline completo:
 python pipeline.py
 ```
 
+Executar etapas específicas:
+
+```bash
+python pipeline.py --steps bronze,silver
+```
+
+Usar um CSV diferente do padrão:
+
+```bash
+python pipeline.py --input caminho/para/outro.csv
+```
+
 Os resultados são exportados automaticamente para `data/exports/`:
 - `top_authors.csv`
 - `top_books.csv`
+- `books_by_language.csv`
 
 Os logs ficam em `logs/pipeline.log` com rotação automática (máx. 1 MB, 5 arquivos).
+
+## Testes
+
+```bash
+pytest
+```
+
+Roda os testes unitários com relatório de cobertura do pacote `ingestion`.
