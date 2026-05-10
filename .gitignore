@@ -215,6 +215,9 @@ tempCodeRunnerFile.py
 # Pipeline logs
 logs/
 
+# Generated exports
+data/exports/
+
 # DuckDB
 *.duckdb
 *.duckdb.wal

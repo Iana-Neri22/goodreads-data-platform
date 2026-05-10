@@ -11,6 +11,7 @@ logging.getLogger().handlers[0].stream.reconfigure(encoding="utf-8")
 log = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
+EXPORTS_PATH = Path(__file__).parent.parent / "data" / "exports"
 
 
 def build(con=None):
@@ -85,6 +86,12 @@ def build(con=None):
             data["average_rating"] or 0,
             f'{data["ratings_count"] or 0:,}',
         )
+
+    EXPORTS_PATH.mkdir(parents=True, exist_ok=True)
+    for table in ("top_authors", "top_books"):
+        dest = (EXPORTS_PATH / f"{table}.csv").as_posix()
+        con.execute(f"COPY gold.{table} TO '{dest}' (HEADER, DELIMITER ',')")
+        log.info("Exportado: %s", dest)
 
     if close_after:
         con.close()
