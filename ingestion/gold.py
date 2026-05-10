@@ -48,7 +48,7 @@ def build(con=None):
             data["authors"][:40],
             data["total_books"],
             data["avg_rating"] or 0,
-            f'{data["total_ratings"] or 0:,}',
+            f"{data['total_ratings'] or 0:,}",
         )
 
     con.execute("""
@@ -79,7 +79,7 @@ def build(con=None):
             "  %-45s %10.2f %12s",
             data["title"][:45],
             data["average_rating"] or 0,
-            f'{data["ratings_count"] or 0:,}',
+            f"{data['ratings_count'] or 0:,}",
         )
 
     con.execute("""
@@ -108,7 +108,7 @@ def build(con=None):
             data["language_code"],
             data["total_books"],
             data["avg_rating"] or 0,
-            f'{data["total_ratings"] or 0:,}',
+            f"{data['total_ratings'] or 0:,}",
         )
 
     EXPORTS_PATH.mkdir(parents=True, exist_ok=True)

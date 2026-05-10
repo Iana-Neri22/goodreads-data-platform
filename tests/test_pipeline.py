@@ -40,7 +40,11 @@ def test_silver_ratings_in_range(con):
 
 def test_silver_no_duplicate_book_ids(con):
     count = con.execute(
-        "SELECT count(*) FROM (SELECT book_id FROM silver.books GROUP BY book_id HAVING count(*) > 1)"
+        (
+            "SELECT count(*) FROM "
+            "(SELECT book_id FROM silver.books "
+            "GROUP BY book_id HAVING count(*) > 1)"
+        )
     ).fetchone()[0]
     assert count == 0, f"{count} book_ids duplicados na silver"
 
