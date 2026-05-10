@@ -33,7 +33,7 @@ ALL_STEPS = {
     "bronze": bronze.ingest,
     "silver": silver.transform,
     "checks": checks.validate,
-    "gold":   gold.build,
+    "gold": gold.build,
 }
 
 

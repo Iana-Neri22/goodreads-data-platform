@@ -22,7 +22,8 @@ def ingest(con=None, csv_path=None):
     con.execute("CREATE SCHEMA IF NOT EXISTS bronze")
 
     con.execute("DROP TABLE IF EXISTS bronze.books_raw")
-    con.execute("""
+    con.execute(
+        """
         CREATE TABLE bronze.books_raw AS
         SELECT *
         FROM read_csv(
@@ -32,7 +33,9 @@ def ingest(con=None, csv_path=None):
             normalize_names = true,
             ignore_errors = true
         )
-    """, [csv_path.as_posix()])
+    """,
+        [csv_path.as_posix()],
+    )
 
     count = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
     cols = con.execute("DESCRIBE bronze.books_raw").fetchall()
