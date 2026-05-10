@@ -5,9 +5,7 @@ from pathlib import Path
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()],
 )
-logging.getLogger().handlers[0].stream.reconfigure(encoding="utf-8")
 log = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
