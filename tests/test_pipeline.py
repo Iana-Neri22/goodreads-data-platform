@@ -1,7 +1,7 @@
 import duckdb
 import pytest
 
-from ingestion import bronze, silver, checks, gold
+from ingestion import bronze, checks, gold, silver
 
 
 @pytest.fixture(scope="module")
@@ -40,11 +40,9 @@ def test_silver_ratings_in_range(con):
 
 def test_silver_no_duplicate_book_ids(con):
     count = con.execute(
-        (
-            "SELECT count(*) FROM "
-            "(SELECT book_id FROM silver.books "
-            "GROUP BY book_id HAVING count(*) > 1)"
-        )
+        "SELECT count(*) FROM "
+        "(SELECT book_id FROM silver.books "
+        "GROUP BY book_id HAVING count(*) > 1)"
     ).fetchone()[0]
     assert count == 0, f"{count} book_ids duplicados na silver"
 
@@ -159,6 +157,33 @@ def test_checks_standalone_mode(tmp_path, monkeypatch):
 
     monkeypatch.setattr(checks, "DB_PATH", db_path)
     checks.validate()
+
+
+def test_silver_no_rows_dropped_when_all_valid():
+    conn = duckdb.connect(":memory:")
+    conn.execute("CREATE SCHEMA bronze")
+    conn.execute(
+        """
+        CREATE TABLE bronze.books_raw (
+            bookid VARCHAR, title VARCHAR, authors VARCHAR, average_rating VARCHAR,
+            isbn VARCHAR, isbn13 VARCHAR, language_code VARCHAR, num_pages VARCHAR,
+            ratings_count VARCHAR, text_reviews_count VARCHAR,
+            publication_date VARCHAR, publisher VARCHAR
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO bronze.books_raw VALUES
+        ('1', 'Valid Book', 'Author', '4.5', '123', '9780123', 'eng', '300',
+         '1000', '50', '01/01/2000', 'Publisher')
+        """
+    )
+    silver.transform(conn)
+    bronze_count = conn.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
+    silver_count = conn.execute("SELECT count(*) FROM silver.books").fetchone()[0]
+    assert bronze_count == silver_count
+    conn.close()
 
 
 def test_checks_fail_on_invalid_data():

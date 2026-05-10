@@ -1,11 +1,16 @@
 # goodreads-data-platform
 
+[![CI](https://github.com/IanaNeri22/goodreads-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/IanaNeri22/goodreads-data-platform/actions/workflows/ci.yml)
+
 Pipeline de dados em camadas (bronze → silver → gold) para análise do dataset de livros do Goodreads, usando DuckDB como warehouse local.
 
 ## Estrutura
 
 ```
 goodreads-data-platform/
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Pipeline de CI (lint, format, type-check, testes)
 ├── data/
 │   ├── books.csv              # Dataset fonte
 │   └── exports/               # CSVs exportados (gerados, não versionados)
@@ -13,12 +18,18 @@ goodreads-data-platform/
 │   ├── bronze.py              # Ingestão bruta do CSV
 │   ├── silver.py              # Limpeza e tipagem dos dados
 │   ├── checks.py              # Verificações de qualidade
-│   └── gold.py                # Agregações analíticas
+│   ├── gold.py                # Agregações analíticas
+│   └── py.typed               # Marcador PEP 561
 ├── logs/
 │   └── pipeline.log           # Histórico de execuções (gerado, não versionado)
 ├── tests/
 │   └── test_pipeline.py       # Testes automatizados
+├── .pre-commit-config.yaml    # Hooks de pre-commit (ruff, mypy)
+├── .python-version            # Versão do Python (3.11)
+├── Makefile                   # Atalhos de comandos
 ├── pipeline.py                # Orquestrador do pipeline
+├── pyproject.toml             # Configuração de ferramentas
+├── requirements.txt           # Dependências
 └── warehouse.duckdb           # Banco local (gerado, não versionado)
 ```
 
@@ -35,9 +46,16 @@ goodreads-data-platform/
 ## Instalação
 
 ```bash
+make install
+```
+
+Ou manualmente:
+
+```bash
 python -m venv .venv
 .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
+pre-commit install
 ```
 
 ## Uso
@@ -88,22 +106,26 @@ Os logs ficam em `logs/pipeline.log` com rotação automática (máx. 1 MB, 5 ar
 
 ## Qualidade de código
 
-Testes com cobertura (mínimo 90%):
+Atalhos via `make`:
+
+```bash
+make install     # cria venv, instala dependências e configura pre-commit
+make check       # lint + formato + type-check + testes (equivalente ao CI)
+make test        # pytest com cobertura (mínimo 90%)
+make lint        # ruff check .
+make format      # ruff format .
+make type-check  # mypy ingestion pipeline.py
+make run         # python pipeline.py
+make clean       # remove warehouse.duckdb, logs/ e data/exports/
+```
+
+Ou diretamente:
 
 ```bash
 pytest
-```
-
-Linting:
-
-```bash
 ruff check .
-```
-
-Verificação de tipos:
-
-```bash
+ruff format .
 mypy ingestion pipeline.py
 ```
 
-Os três são executados automaticamente no CI a cada push.
+Lint, formato e type check são executados automaticamente no CI a cada push.
