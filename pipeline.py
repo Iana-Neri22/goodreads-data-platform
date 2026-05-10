@@ -16,6 +16,12 @@ LOG_PATH.parent.mkdir(exist_ok=True)
 
 _fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 
+logging.getLogger().setLevel(logging.INFO)
+
+_console = logging.StreamHandler()
+_console.setFormatter(_fmt)
+logging.getLogger().addHandler(_console)
+
 _file = RotatingFileHandler(LOG_PATH, maxBytes=1_000_000, backupCount=5, encoding="utf-8")
 _file.setFormatter(_fmt)
 logging.getLogger().addHandler(_file)
@@ -31,7 +37,7 @@ ALL_STEPS = {
 }
 
 
-def run(selected=None):
+def run(selected=None, csv_path=None):
     steps = {k: v for k, v in ALL_STEPS.items() if selected is None or k in selected}
 
     start_total = time.time()
@@ -41,30 +47,45 @@ def run(selected=None):
         for name, fn in steps.items():
             log.info("=== Iniciando etapa: %s ===", name)
             t = time.time()
-            fn(con)
+            fn(con, csv_path) if name == "bronze" and csv_path else fn(con)
             log.info("=== Etapa %s concluída em %.1fs ===", name, time.time() - t)
 
-        _print_summary(con, time.time() - start_total)
+        _print_summary(con, steps, time.time() - start_total)
 
 
-def _print_summary(con, elapsed):
-    bronze   = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
-    silver   = con.execute("SELECT count(*) FROM silver.books").fetchone()[0]
-    authors   = con.execute("SELECT count(*) FROM gold.top_authors").fetchone()[0]
-    books     = con.execute("SELECT count(*) FROM gold.top_books").fetchone()[0]
-    languages = con.execute("SELECT count(*) FROM gold.books_by_language").fetchone()[0]
+def _count(con, query):
+    try:
+        return con.execute(query).fetchone()[0]
+    except Exception:
+        return None
 
+
+def _print_summary(con, steps, elapsed):
     log.info("")
     log.info("╔══════════════════════════════════╗")
     log.info("║         RESUMO DO PIPELINE       ║")
     log.info("╠══════════════════════════════════╣")
-    log.info("║  bronze.books_raw       %8d  ║", bronze)
-    log.info("║  silver.books           %8d  ║", silver)
-    log.info("║  linhas descartadas     %8d  ║", bronze - silver)
-    log.info("╠══════════════════════════════════╣")
-    log.info("║  gold.top_authors       %8d  ║", authors)
-    log.info("║  gold.top_books         %8d  ║", books)
-    log.info("║  gold.books_by_language %8d  ║", languages)
+
+    if "bronze" in steps:
+        bronze = _count(con, "SELECT count(*) FROM bronze.books_raw")
+        log.info("║  bronze.books_raw       %8s  ║", bronze if bronze is not None else "N/A")
+
+    if "silver" in steps:
+        silver = _count(con, "SELECT count(*) FROM silver.books")
+        log.info("║  silver.books           %8s  ║", silver if silver is not None else "N/A")
+        if "bronze" in steps and bronze is not None and silver is not None:
+            log.info("║  linhas descartadas     %8d  ║", bronze - silver)
+
+    if "gold" in steps:
+        log.info("╠══════════════════════════════════╣")
+        for label, table in (
+            ("gold.top_authors      ", "gold.top_authors"),
+            ("gold.top_books        ", "gold.top_books"),
+            ("gold.books_by_language", "gold.books_by_language"),
+        ):
+            n = _count(con, f"SELECT count(*) FROM {table}")
+            log.info("║  %s %8s  ║", label, n if n is not None else "N/A")
+
     log.info("╠══════════════════════════════════╣")
     log.info("║  tempo total          %9.2fs  ║", elapsed)
     log.info("╚══════════════════════════════════╝")
@@ -76,6 +97,10 @@ if __name__ == "__main__":
         "--steps",
         help=f"Etapas a executar, separadas por vírgula. Disponíveis: {', '.join(ALL_STEPS)}",
     )
+    parser.add_argument(
+        "--input",
+        help="Caminho para o CSV de entrada (padrão: data/books.csv)",
+    )
     args = parser.parse_args()
 
     selected = [s.strip() for s in args.steps.split(",")] if args.steps else None
@@ -86,7 +111,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
     try:
-        run(selected)
+        run(selected, csv_path=args.input)
     except Exception as e:
         log.error("Pipeline falhou: %s", e)
         sys.exit(1)

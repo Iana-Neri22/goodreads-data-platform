@@ -68,3 +68,9 @@ def test_gold_top_books_min_ratings(con):
         "SELECT count(*) FROM gold.top_books WHERE ratings_count < 1000"
     ).fetchone()[0]
     assert count == 0, "gold.top_books contém livros com menos de 1000 avaliações"
+
+
+def test_bronze_rejects_missing_file():
+    conn = duckdb.connect(":memory:")
+    with pytest.raises(FileNotFoundError):
+        bronze.ingest(conn, csv_path="nao_existe.csv")
