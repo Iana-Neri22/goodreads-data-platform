@@ -55,7 +55,7 @@ def test_silver_types(con):
     assert cols["average_rating"] == "DOUBLE"
     assert cols["num_pages"] == "INTEGER"
     assert cols["publication_date"] == "DATE"
-    assert "TIMESTAMP" in cols["loaded_at"]
+    assert cols["loaded_at"] == "TIMESTAMP"
 
 
 def test_quality_checks_pass(con):
@@ -65,6 +65,17 @@ def test_quality_checks_pass(con):
 def test_gold_top_authors(con):
     count = con.execute("SELECT count(*) FROM gold.top_authors").fetchone()[0]
     assert count > 0, "gold.top_authors está vazia"
+
+
+def test_gold_types(con):
+    for table in ("top_authors", "top_books", "books_by_language"):
+        cols = {
+            row[0]: row[1]
+            for row in con.execute(f"DESCRIBE gold.{table}").fetchall()
+        }
+        assert cols["loaded_at"] == "TIMESTAMP", (
+            f"gold.{table}.loaded_at deveria ser TIMESTAMP, é {cols['loaded_at']}"
+        )
 
 
 def test_gold_top_books_min_ratings(con):
@@ -121,6 +132,17 @@ def test_gold_standalone_mode(tmp_path, monkeypatch):
     count = conn.execute("SELECT count(*) FROM gold.top_authors").fetchone()[0]
     conn.close()
     assert count > 0, "gold.top_authors está vazia no modo standalone"
+
+
+def test_checks_standalone_mode(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.duckdb"
+    conn = duckdb.connect(str(db_path))
+    bronze.ingest(conn)
+    silver.transform(conn)
+    conn.close()
+
+    monkeypatch.setattr(checks, "DB_PATH", db_path)
+    checks.validate()
 
 
 def test_checks_fail_on_invalid_data():

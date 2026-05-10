@@ -28,7 +28,8 @@ def build(con=None):
             SUM(ratings_count)                             AS total_ratings,
             SUM(text_reviews_count)                        AS total_reviews,
             MIN(publication_date)                          AS first_publication,
-            MAX(publication_date)                          AS last_publication
+            MAX(publication_date)                          AS last_publication,
+            CURRENT_TIMESTAMP::TIMESTAMP                   AS loaded_at
         FROM silver.books
         WHERE authors IS NOT NULL
         GROUP BY authors
@@ -61,7 +62,8 @@ def build(con=None):
             ratings_count,
             num_pages,
             publication_date,
-            publisher
+            publisher,
+            CURRENT_TIMESTAMP::TIMESTAMP                   AS loaded_at
         FROM silver.books
         WHERE ratings_count >= 1000
         ORDER BY average_rating DESC, ratings_count DESC
@@ -88,7 +90,8 @@ def build(con=None):
             language_code,
             COUNT(*)                        AS total_books,
             ROUND(AVG(average_rating), 2)   AS avg_rating,
-            SUM(ratings_count)              AS total_ratings
+            SUM(ratings_count)              AS total_ratings,
+            CURRENT_TIMESTAMP::TIMESTAMP    AS loaded_at
         FROM silver.books
         WHERE language_code IS NOT NULL
         GROUP BY language_code

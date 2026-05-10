@@ -34,7 +34,7 @@ def transform(con=None):
                 AS DATE
             )                                                   AS publication_date,
             NULLIF(TRIM(publisher), '')                        AS publisher,
-            CURRENT_TIMESTAMP                                   AS loaded_at
+            CURRENT_TIMESTAMP::TIMESTAMP                        AS loaded_at
         FROM bronze.books_raw
         WHERE
             TRIM(title) IS NOT NULL
