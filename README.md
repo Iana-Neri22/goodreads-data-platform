@@ -60,6 +60,18 @@ Usar um CSV diferente do padrão:
 python pipeline.py --input caminho/para/outro.csv
 ```
 
+Usar um banco DuckDB diferente do padrão:
+
+```bash
+python pipeline.py --db outro_warehouse.duckdb
+```
+
+Os argumentos podem ser combinados:
+
+```bash
+python pipeline.py --input outro.csv --db dev.duckdb --steps bronze,silver
+```
+
 Os resultados são exportados automaticamente para `data/exports/`:
 - `top_authors.csv`
 - `top_books.csv`

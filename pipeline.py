@@ -43,19 +43,20 @@ ALL_STEPS = {
 }
 
 
-def run(selected=None, csv_path=None):
+def run(selected=None, csv_path=None, db_path=None):
     steps = {
         key: value
         for key, value in ALL_STEPS.items()
         if selected is None or key in selected
     }
 
+    db = db_path or DB_PATH
     start_total = time.time()
 
     log.info("Etapas selecionadas: %s", ", ".join(steps))
-    log.info("Conectando ao warehouse: %s", DB_PATH)
+    log.info("Conectando ao warehouse: %s", db)
 
-    with duckdb.connect(DB_PATH) as con:
+    with duckdb.connect(db) as con:
         for name, fn in steps.items():
             log.info("=== Iniciando etapa: %s ===", name)
 
@@ -156,7 +157,21 @@ if __name__ == "__main__":
         help="Caminho para o CSV de entrada (padrão: data/books.csv)",
     )
 
+    parser.add_argument(
+        "--db",
+        help=f"Caminho para o banco DuckDB (padrão: {DB_PATH})",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Nível de logging (padrão: INFO)",
+    )
+
     args = parser.parse_args()
+
+    logging.getLogger().setLevel(args.log_level)
 
     selected = (
         [step.strip() for step in args.steps.split(",")]
@@ -177,7 +192,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
     try:
-        run(selected, csv_path=args.input)
+        run(selected, csv_path=args.input, db_path=args.db)
 
     except Exception as exc:
         log.exception("Pipeline falhou: %s", exc)
