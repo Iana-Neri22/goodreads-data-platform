@@ -9,7 +9,9 @@ DEFAULT_CSV_PATH = ROOT / "data" / "books.csv"
 DB_PATH = ROOT / "warehouse.duckdb"
 
 
-def ingest(con=None, csv_path=None):
+def ingest(
+    con: duckdb.DuckDBPyConnection | None = None, csv_path: str | Path | None = None
+) -> None:
     csv_path = Path(csv_path) if csv_path else DEFAULT_CSV_PATH
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV não encontrado: {csv_path}")
@@ -37,7 +39,8 @@ def ingest(con=None, csv_path=None):
         [csv_path.as_posix()],
     )
 
-    count = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
+    row = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()
+    count = row[0] if row is not None else 0
     cols = con.execute("DESCRIBE bronze.books_raw").fetchall()
 
     log.info("Ingestão concluída: %d linhas carregadas", count)
@@ -49,6 +52,6 @@ def ingest(con=None, csv_path=None):
         con.close()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     ingest()

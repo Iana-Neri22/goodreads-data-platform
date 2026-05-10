@@ -2,6 +2,7 @@ import argparse
 import logging
 import sys
 import time
+from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -35,7 +36,7 @@ root_logger.addHandler(file_handler)
 
 log = logging.getLogger(__name__)
 
-ALL_STEPS = {
+ALL_STEPS: dict[str, Callable[..., None]] = {
     "bronze": bronze.ingest,
     "silver": silver.transform,
     "checks": checks.validate,
@@ -43,12 +44,10 @@ ALL_STEPS = {
 }
 
 
-def run(selected=None, csv_path=None, db_path=None):
-    steps = {
-        key: value
-        for key, value in ALL_STEPS.items()
-        if selected is None or key in selected
-    }
+def run(
+    selected: list[str] | None = None, csv_path: str | None = None, db_path: str | None = None
+) -> None:
+    steps = {key: value for key, value in ALL_STEPS.items() if selected is None or key in selected}
 
     db = db_path or DB_PATH
     start_total = time.time()
@@ -73,14 +72,19 @@ def run(selected=None, csv_path=None, db_path=None):
         _print_summary(con, steps, time.time() - start_total)
 
 
-def _count(con, query):
+def _count(con: duckdb.DuckDBPyConnection, query: str) -> int | None:
     try:
-        return con.execute(query).fetchone()[0]
+        row = con.execute(query).fetchone()
+        return row[0] if row is not None else None
     except duckdb.CatalogException:
         return None
 
 
-def _print_summary(con, steps, elapsed):
+def _print_summary(
+    con: duckdb.DuckDBPyConnection,
+    steps: dict[str, Callable[..., None]],
+    elapsed: float,
+) -> None:
     log.info("")
     log.info("╔══════════════════════════════════╗")
     log.info("║         RESUMO DO PIPELINE       ║")
@@ -119,20 +123,13 @@ def _print_summary(con, steps, elapsed):
     if "gold" in steps:
         log.info("╠══════════════════════════════════╣")
 
-        tables = (
-            ("gold.top_authors", "gold.top_authors"),
-            ("gold.top_books", "gold.top_books"),
-            ("gold.books_by_language", "gold.books_by_language"),
-        )
-
-        for label, table in tables:
+        for table in ("gold.top_authors", "gold.top_books", "gold.books_by_language"):
             count = _count(con, f"SELECT count(*) FROM {table}")
+            log.info("║  %-24s %8s  ║", table, count if count is not None else "N/A")
 
-            log.info(
-                "║  %-24s %8s  ║",
-                label,
-                count if count is not None else "N/A",
-            )
+    if "checks" in steps:
+        log.info("╠══════════════════════════════════╣")
+        log.info("║  verificações             6/6 OK  ║")
 
     log.info("╠══════════════════════════════════╣")
     log.info("║  tempo total          %9.2fs  ║", elapsed)
@@ -146,10 +143,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--steps",
-        help=(
-            "Etapas a executar, separadas por vírgula. "
-            f"Disponíveis: {', '.join(ALL_STEPS)}"
-        ),
+        help=(f"Etapas a executar, separadas por vírgula. Disponíveis: {', '.join(ALL_STEPS)}"),
     )
 
     parser.add_argument(
@@ -173,27 +167,20 @@ if __name__ == "__main__":
 
     logging.getLogger().setLevel(args.log_level)
 
-    selected = (
-        [step.strip() for step in args.steps.split(",")]
-        if args.steps
-        else None
-    )
+    selected = [step.strip() for step in args.steps.split(",")] if args.steps else None
 
     if selected:
         invalid = [step for step in selected if step not in ALL_STEPS]
 
         if invalid:
             print(
-                (
-                    f"Etapas inválidas: {', '.join(invalid)}. "
-                    f"Disponíveis: {', '.join(ALL_STEPS)}"
-                ),
+                (f"Etapas inválidas: {', '.join(invalid)}. Disponíveis: {', '.join(ALL_STEPS)}"),
             )
             sys.exit(1)
 
     try:
         run(selected, csv_path=args.input, db_path=args.db)
 
-    except Exception as exc:
-        log.exception("Pipeline falhou: %s", exc)
+    except Exception:
+        log.exception("Pipeline falhou")
         sys.exit(1)

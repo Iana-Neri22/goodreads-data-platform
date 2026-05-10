@@ -86,10 +86,24 @@ Os resultados são exportados automaticamente para `data/exports/`:
 
 Os logs ficam em `logs/pipeline.log` com rotação automática (máx. 1 MB, 5 arquivos).
 
-## Testes
+## Qualidade de código
+
+Testes com cobertura (mínimo 90%):
 
 ```bash
 pytest
 ```
 
-Roda os testes unitários com relatório de cobertura do pacote `ingestion`.
+Linting:
+
+```bash
+ruff check .
+```
+
+Verificação de tipos:
+
+```bash
+mypy ingestion pipeline.py
+```
+
+Os três são executados automaticamente no CI a cada push.

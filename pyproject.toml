@@ -1,6 +1,15 @@
+[project]
+name = "goodreads-data-platform"
+version = "0.1.0"
+requires-python = ">=3.11"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --cov=ingestion --cov-report=term-missing --cov-fail-under=90"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
