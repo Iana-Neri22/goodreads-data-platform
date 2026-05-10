@@ -2,10 +2,6 @@ import duckdb
 import logging
 from pathlib import Path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
 log = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
@@ -58,4 +54,5 @@ def transform(con=None):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     transform()

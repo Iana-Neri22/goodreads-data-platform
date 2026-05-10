@@ -2,37 +2,37 @@ import duckdb
 import logging
 from pathlib import Path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
 log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).parent.parent
-CSV_PATH = ROOT / "data" / "books.csv"
+DEFAULT_CSV_PATH = ROOT / "data" / "books.csv"
 DB_PATH = ROOT / "warehouse.duckdb"
 
 
-def ingest(con=None):
+def ingest(con=None, csv_path=None):
+    csv_path = Path(csv_path) if csv_path else DEFAULT_CSV_PATH
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV não encontrado: {csv_path}")
     close_after = con is None
     if con is None:
         log.info("Conectando ao warehouse: %s", DB_PATH)
         con = duckdb.connect(str(DB_PATH))
 
+    log.info("Lendo CSV: %s", csv_path)
     con.execute("CREATE SCHEMA IF NOT EXISTS bronze")
 
     con.execute("DROP TABLE IF EXISTS bronze.books_raw")
-    con.execute(f"""
+    con.execute("""
         CREATE TABLE bronze.books_raw AS
         SELECT *
         FROM read_csv(
-            '{CSV_PATH.as_posix()}',
+            ?,
             header = true,
             all_varchar = true,
             normalize_names = true,
             ignore_errors = true
         )
-    """)
+    """, [csv_path.as_posix()])
 
     count = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
     cols = con.execute("DESCRIBE bronze.books_raw").fetchall()
@@ -47,4 +47,5 @@ def ingest(con=None):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     ingest()
