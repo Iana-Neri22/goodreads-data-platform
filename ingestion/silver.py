@@ -37,7 +37,8 @@ def transform(con=None):
                 TRY_STRPTIME(TRIM(publication_date), '%m/%d/%Y')
                 AS DATE
             )                                                   AS publication_date,
-            NULLIF(TRIM(publisher), '')                        AS publisher
+            NULLIF(TRIM(publisher), '')                        AS publisher,
+            CURRENT_TIMESTAMP                                   AS loaded_at
         FROM bronze.books_raw
         WHERE
             TRIM(title) IS NOT NULL
