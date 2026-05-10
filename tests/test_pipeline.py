@@ -80,6 +80,17 @@ def test_bronze_rejects_missing_file():
         bronze.ingest(conn, csv_path="nao_existe.csv")
 
 
+def test_bronze_standalone_mode(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.duckdb"
+    monkeypatch.setattr(bronze, "DB_PATH", db_path)
+    bronze.ingest()
+
+    conn = duckdb.connect(str(db_path))
+    count = conn.execute("SELECT count(*) FROM bronze.books_raw").fetchone()[0]
+    conn.close()
+    assert count > 0, "bronze.books_raw está vazia no modo standalone"
+
+
 def test_silver_standalone_mode(tmp_path, monkeypatch):
     db_path = tmp_path / "test.duckdb"
     conn = duckdb.connect(str(db_path))
@@ -93,6 +104,23 @@ def test_silver_standalone_mode(tmp_path, monkeypatch):
     count = conn.execute("SELECT count(*) FROM silver.books").fetchone()[0]
     conn.close()
     assert count > 0, "silver.books está vazia no modo standalone"
+
+
+def test_gold_standalone_mode(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.duckdb"
+    conn = duckdb.connect(str(db_path))
+    bronze.ingest(conn)
+    silver.transform(conn)
+    conn.close()
+
+    monkeypatch.setattr(gold, "DB_PATH", db_path)
+    monkeypatch.setattr(gold, "EXPORTS_PATH", tmp_path / "exports")
+    gold.build()
+
+    conn = duckdb.connect(str(db_path))
+    count = conn.execute("SELECT count(*) FROM gold.top_authors").fetchone()[0]
+    conn.close()
+    assert count > 0, "gold.top_authors está vazia no modo standalone"
 
 
 def test_checks_fail_on_invalid_data():
