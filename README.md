@@ -1,6 +1,6 @@
 # goodreads-data-platform
 
-[![CI](https://github.com/IanaNeri22/goodreads-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/IanaNeri22/goodreads-data-platform/actions/workflows/ci.yml)
+[![CI](https://github.com/Iana-Neri22/goodreads-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Iana-Neri22/goodreads-data-platform/actions/workflows/ci.yml)
 
 Pipeline de dados em camadas (bronze → silver → gold) para análise do dataset de livros do Goodreads, usando DuckDB como warehouse local.
 
