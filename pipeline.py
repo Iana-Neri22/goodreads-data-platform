@@ -162,7 +162,16 @@ if __name__ == "__main__":
         help=f"Caminho para o banco DuckDB (padrão: {DB_PATH})",
     )
 
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Nível de logging (padrão: INFO)",
+    )
+
     args = parser.parse_args()
+
+    logging.getLogger().setLevel(args.log_level)
 
     selected = (
         [step.strip() for step in args.steps.split(",")]

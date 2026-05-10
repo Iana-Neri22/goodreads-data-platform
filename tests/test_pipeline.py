@@ -80,6 +80,21 @@ def test_bronze_rejects_missing_file():
         bronze.ingest(conn, csv_path="nao_existe.csv")
 
 
+def test_silver_standalone_mode(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.duckdb"
+    conn = duckdb.connect(str(db_path))
+    bronze.ingest(conn)
+    conn.close()
+
+    monkeypatch.setattr(silver, "DB_PATH", db_path)
+    silver.transform()
+
+    conn = duckdb.connect(str(db_path))
+    count = conn.execute("SELECT count(*) FROM silver.books").fetchone()[0]
+    conn.close()
+    assert count > 0, "silver.books está vazia no modo standalone"
+
+
 def test_checks_fail_on_invalid_data():
     conn = duckdb.connect(":memory:")
     conn.execute("CREATE SCHEMA silver")
