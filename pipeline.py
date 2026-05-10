@@ -47,7 +47,10 @@ def run(selected=None, csv_path=None):
         for name, fn in steps.items():
             log.info("=== Iniciando etapa: %s ===", name)
             t = time.time()
-            fn(con, csv_path) if name == "bronze" and csv_path else fn(con)
+            if name == "bronze" and csv_path:
+                fn(con, csv_path)
+            else:
+                fn(con)
             log.info("=== Etapa %s concluída em %.1fs ===", name, time.time() - t)
 
         _print_summary(con, steps, time.time() - start_total)
