@@ -150,7 +150,7 @@ activemq-data/
 # Environments
 .env
 .envrc
-.venv
+.venv/
 env/
 venv/
 ENV/
@@ -221,6 +221,7 @@ data/exports/
 # DuckDB
 *.duckdb
 *.duckdb.wal
+*.duckdb-shm
 
 # Marimo
 marimo/_static/

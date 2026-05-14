@@ -12,6 +12,8 @@ goodreads-data-platform/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             # Pipeline de CI (lint, format, type-check, testes)
+├── dashboard/
+│   └── app.py                 # Dashboard Streamlit (autores, livros, idiomas)
 ├── data/
 │   ├── books.csv              # Dataset fonte
 │   └── exports/               # CSVs exportados (gerados, não versionados)
@@ -98,6 +100,24 @@ Os argumentos podem ser combinados:
 python pipeline.py --input outro.csv --db dev.duckdb --steps bronze,silver --log-level WARNING
 ```
 
+## Dashboard
+
+Instalar as dependências do dashboard:
+
+```bash
+pip install -e ".[dashboard]"
+```
+
+Iniciar o dashboard (requer o warehouse gerado pelo pipeline):
+
+```bash
+make dashboard
+```
+
+O dashboard abre em `http://localhost:8501` com três abas: **Autores**, **Livros** e **Idiomas**.
+
+## Exportações
+
 Os resultados são exportados automaticamente para `data/exports/`:
 - `top_authors.csv`
 - `top_books.csv`
@@ -112,11 +132,13 @@ Atalhos via `make`:
 ```bash
 make install     # cria venv, instala dependências e configura pre-commit
 make check       # lint + formato + type-check + testes (equivalente ao CI)
-make test        # pytest com cobertura (mínimo 90%)
+make test        # pytest com cobertura (mínimo 100%)
 make lint        # ruff check .
 make format      # ruff format .
+make format-check  # ruff format --check . (usado pelo make check)
 make type-check  # mypy ingestion pipeline.py
 make run         # python pipeline.py
+make dashboard   # streamlit run dashboard/app.py
 make clean       # remove warehouse.duckdb, logs/ e data/exports/
 ```
 

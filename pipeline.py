@@ -173,8 +173,10 @@ if __name__ == "__main__":
         invalid = [step for step in selected if step not in ALL_STEPS]
 
         if invalid:
-            print(
-                (f"Etapas inválidas: {', '.join(invalid)}. Disponíveis: {', '.join(ALL_STEPS)}"),
+            log.error(
+                "Etapas inválidas: %s. Disponíveis: %s",
+                ", ".join(invalid),
+                ", ".join(ALL_STEPS),
             )
             sys.exit(1)
 
