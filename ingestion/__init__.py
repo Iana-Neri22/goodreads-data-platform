@@ -3,4 +3,4 @@ from ingestion.checks import validate
 from ingestion.gold import build
 from ingestion.silver import transform
 
-__all__ = ["ingest", "transform", "validate", "build"]
+__all__ = ["build", "ingest", "transform", "validate"]

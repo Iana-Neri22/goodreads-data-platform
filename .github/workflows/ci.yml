@@ -35,4 +35,4 @@ jobs:
         run: pytest
 
       - name: Smoke test
-        run: python pipeline.py
+        run: python pipeline.py --log-level WARNING

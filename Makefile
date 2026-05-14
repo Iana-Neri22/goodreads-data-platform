@@ -1,4 +1,4 @@
-.PHONY: lint format type-check test run check clean install
+.PHONY: lint format format-check type-check test run check clean install dashboard
 
 install:
 	python -m venv .venv
@@ -11,6 +11,9 @@ lint:
 format:
 	ruff format .
 
+format-check:
+	ruff format --check .
+
 type-check:
 	mypy ingestion pipeline.py
 
@@ -20,7 +23,10 @@ test:
 run:
 	python pipeline.py
 
-check: lint format type-check test
+dashboard:
+	streamlit run dashboard/app.py
+
+check: lint format-check type-check test
 
 clean:
 	if exist warehouse.duckdb del /f /q warehouse.duckdb
