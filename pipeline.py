@@ -4,17 +4,13 @@ import sys
 import time
 from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 import duckdb
 
 from ingestion import bronze, checks, gold, silver
+from ingestion.config import settings
 
-ROOT = Path(__file__).parent
-DB_PATH = str(ROOT / "warehouse.duckdb")
-LOG_PATH = ROOT / "logs" / "pipeline.log"
-
-LOG_PATH.parent.mkdir(exist_ok=True)
+settings.log_path.parent.mkdir(exist_ok=True)
 
 FMT = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 
@@ -26,9 +22,9 @@ console_handler.setFormatter(FMT)
 root_logger.addHandler(console_handler)
 
 file_handler = RotatingFileHandler(
-    LOG_PATH,
-    maxBytes=1_000_000,
-    backupCount=5,
+    settings.log_path,
+    maxBytes=settings.log_max_bytes,
+    backupCount=settings.log_backup_count,
     encoding="utf-8",
 )
 file_handler.setFormatter(FMT)
@@ -49,7 +45,7 @@ def run(
 ) -> None:
     steps = {key: value for key, value in ALL_STEPS.items() if selected is None or key in selected}
 
-    db = db_path or DB_PATH
+    db = db_path or str(settings.db_path)
     start_total = time.time()
 
     log.info("Etapas selecionadas: %s", ", ".join(steps))
@@ -153,7 +149,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--db",
-        help=f"Caminho para o banco DuckDB (padrão: {DB_PATH})",
+        help=f"Caminho para o banco DuckDB (padrão: {settings.db_path})",
     )
 
     parser.add_argument(

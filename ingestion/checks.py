@@ -1,11 +1,10 @@
 import logging
-from pathlib import Path
 
 import duckdb
 
-log = logging.getLogger(__name__)
+from ingestion.config import settings
 
-DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
+log = logging.getLogger(__name__)
 
 
 def _check(
@@ -33,7 +32,7 @@ def validate(con: duckdb.DuckDBPyConnection | None = None) -> None:
     close_after = con is None
 
     if con is None:
-        con = duckdb.connect(str(DB_PATH))
+        con = duckdb.connect(str(settings.db_path))
 
     log.info("Executando verificações de qualidade em silver.books...")
 
