@@ -50,12 +50,17 @@ goodreads-data-platform/
 │   └── pipeline.log           # Histórico de execuções (gerado, não versionado)
 ├── tests/
 │   └── test_pipeline.py       # Testes automatizados
+├── scripts/
+│   └── prefect_start.ps1      # Inicialização completa do Prefect (servidor + worker)
 ├── .pre-commit-config.yaml    # Hooks de pre-commit (ruff, mypy)
 ├── .python-version            # Versão do Python (3.11)
+├── flow.py                    # Flow e tasks Prefect
 ├── Makefile                   # Atalhos de comandos
-├── pipeline.py                # Orquestrador do pipeline
+├── pipeline.py                # Orquestrador CLI do pipeline
+├── prefect.yaml               # Deployments Prefect
 ├── pyproject.toml             # Configuração de ferramentas
 ├── requirements.txt           # Dependências
+├── serve.py                   # Servidor local Prefect (modo desenvolvimento)
 └── warehouse.duckdb           # Banco local (gerado, não versionado)
 ```
 
@@ -149,6 +154,57 @@ make dashboard
 
 O dashboard abre em `http://localhost:8501` com três abas: **Autores**, **Livros** e **Idiomas**.
 
+## Orquestração com Prefect
+
+O pipeline pode ser orquestrado com [Prefect](https://docs.prefect.io), que adiciona UI de monitoramento, histórico de execuções e agendamento.
+
+Instalar as dependências do Prefect:
+
+```bash
+pip install -e ".[prefect]"
+```
+
+### Modo simples — `serve.py`
+
+Sobe um servidor embutido sem infraestrutura adicional. Ideal para desenvolvimento local.
+
+```bash
+# Terminal 1 — inicia o servidor e aguarda runs
+python serve.py
+
+# Terminal 2 — dispara um run
+prefect deployment run 'goodreads-pipeline/local'
+```
+
+### Modo completo — servidor + worker
+
+Necessário para usar a UI, agendamentos e múltiplos workers.
+
+```bash
+make prefect      # abre servidor e worker em janelas separadas, registra deployments
+make prefect-run  # dispara o pipeline completo
+```
+
+A UI fica disponível em `http://localhost:4200` após `make prefect`.
+
+### Deployments disponíveis
+
+| Deployment | Etapas | Comando |
+|---|---|---|
+| `full-pipeline` | bronze → silver → checks → gold | `make prefect-run` |
+| `ingest-only` | bronze → silver | `prefect deployment run 'goodreads-pipeline/ingest-only'` |
+
+### Agendamento
+
+Para executar o pipeline automaticamente, adicione um `schedule` no [prefect.yaml](prefect.yaml) sob o deployment desejado e rode `make prefect` novamente:
+
+```yaml
+schedules:
+  - cron: "0 6 * * *"
+    timezone: "America/Sao_Paulo"
+    active: true
+```
+
 ## Exportações
 
 Os resultados são exportados automaticamente para `data/exports/`:
@@ -172,6 +228,8 @@ make format-check  # ruff format --check . (usado pelo make check)
 make type-check  # mypy ingestion pipeline.py
 make run         # python pipeline.py
 make dashboard   # streamlit run dashboard/app.py
+make prefect     # sobe servidor Prefect + worker + registra deployments
+make prefect-run # dispara o deployment full-pipeline
 make clean       # remove warehouse.duckdb, logs/ e data/exports/
 ```
 
