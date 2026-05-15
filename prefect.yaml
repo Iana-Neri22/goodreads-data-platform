@@ -1,0 +1,32 @@
+name: goodreads-data-platform
+prefect-version: 3.7.0
+
+build: null
+push: null
+pull: null
+
+deployments:
+  - name: full-pipeline
+    description: "Goodreads data pipeline — bronze → silver → checks → gold"
+    entrypoint: flow.py:pipeline
+    parameters:
+      csv_path: data/books.csv
+    schedules: []
+    work_pool:
+      name: local-process
+      work_queue_name: default
+      job_variables: {}
+
+  - name: ingest-only
+    description: "Apenas ingestão e transformação (bronze + silver)"
+    entrypoint: flow.py:pipeline
+    parameters:
+      csv_path: data/books.csv
+      steps:
+        - bronze
+        - silver
+    schedules: []
+    work_pool:
+      name: local-process
+      work_queue_name: default
+      job_variables: {}
