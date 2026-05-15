@@ -1,14 +1,18 @@
-from pathlib import Path
-
 import duckdb
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
+from ingestion.config import settings
+
+DB_PATH = settings.db_path
 
 st.set_page_config(page_title="Goodreads Dashboard", page_icon="📚", layout="wide")
-st.title("📚 Goodreads Data Platform")
+
+col_title, col_btn = st.columns([8, 1])
+col_title.title("📚 Goodreads Data Platform")
+if col_btn.button("🔄 Recarregar", use_container_width=True):
+    st.cache_data.clear()
 
 if not DB_PATH.exists():
     st.error(f"Warehouse não encontrado em `{DB_PATH}`. Execute `python pipeline.py` primeiro.")
