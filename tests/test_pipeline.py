@@ -2,6 +2,7 @@ import duckdb
 import pytest
 
 from ingestion import bronze, checks, gold, silver
+from ingestion.config import settings
 
 
 @pytest.fixture(scope="module")
@@ -88,7 +89,7 @@ def test_bronze_rejects_missing_file():
 
 def test_bronze_standalone_mode(tmp_path, monkeypatch):
     db_path = tmp_path / "test.duckdb"
-    monkeypatch.setattr(bronze, "DB_PATH", db_path)
+    monkeypatch.setattr(settings, "db_path", db_path)
     bronze.ingest()
 
     conn = duckdb.connect(str(db_path))
@@ -103,7 +104,7 @@ def test_silver_standalone_mode(tmp_path, monkeypatch):
     bronze.ingest(conn)
     conn.close()
 
-    monkeypatch.setattr(silver, "DB_PATH", db_path)
+    monkeypatch.setattr(settings, "db_path", db_path)
     silver.transform()
 
     conn = duckdb.connect(str(db_path))
@@ -119,8 +120,8 @@ def test_gold_standalone_mode(tmp_path, monkeypatch):
     silver.transform(conn)
     conn.close()
 
-    monkeypatch.setattr(gold, "DB_PATH", db_path)
-    monkeypatch.setattr(gold, "EXPORTS_PATH", tmp_path / "exports")
+    monkeypatch.setattr(settings, "db_path", db_path)
+    monkeypatch.setattr(settings, "exports_path", tmp_path / "exports")
     gold.build()
 
     conn = duckdb.connect(str(db_path))
@@ -137,8 +138,8 @@ def test_gold_exports_exclude_loaded_at(tmp_path, monkeypatch):
     silver.transform(conn)
     conn.close()
 
-    monkeypatch.setattr(gold, "DB_PATH", db_path)
-    monkeypatch.setattr(gold, "EXPORTS_PATH", exports_path)
+    monkeypatch.setattr(settings, "db_path", db_path)
+    monkeypatch.setattr(settings, "exports_path", exports_path)
     gold.build()
 
     for table in ("top_authors", "top_books", "books_by_language"):
@@ -155,7 +156,7 @@ def test_checks_standalone_mode(tmp_path, monkeypatch):
     silver.transform(conn)
     conn.close()
 
-    monkeypatch.setattr(checks, "DB_PATH", db_path)
+    monkeypatch.setattr(settings, "db_path", db_path)
     checks.validate()
 
 

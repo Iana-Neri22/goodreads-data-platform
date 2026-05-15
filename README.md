@@ -5,6 +5,29 @@
 
 Pipeline de dados em camadas (bronze → silver → gold) para análise do dataset de livros do Goodreads, usando DuckDB como warehouse local.
 
+## Arquitetura
+
+```mermaid
+flowchart LR
+    CSV([books.csv]) --> B
+
+    subgraph Pipeline
+        B[bronze\nbooks_raw]
+        S[silver\nbooks]
+        G1[gold\ntop_authors]
+        G2[gold\ntop_books]
+        G3[gold\nbooks_by_language]
+
+        B -->|limpeza e tipagem| S
+        S -->|agrega por autor| G1
+        S -->|filtra por rating| G2
+        S -->|agrupa por idioma| G3
+    end
+
+    G1 & G2 & G3 --> D([Dashboard\nStreamlit])
+    G1 & G2 & G3 --> E([data/exports\n*.csv])
+```
+
 ## Estrutura
 
 ```
@@ -60,6 +83,16 @@ python -m venv .venv
 pip install -r requirements.txt
 pre-commit install
 ```
+
+## Configuração
+
+Copie o arquivo de exemplo e ajuste os valores conforme necessário:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Todas as variáveis são opcionais — sem `.env`, o pipeline usa os valores padrão. Consulte [.env.example](.env.example) para a lista completa.
 
 ## Uso
 

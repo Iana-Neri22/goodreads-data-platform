@@ -3,25 +3,23 @@ from pathlib import Path
 
 import duckdb
 
-log = logging.getLogger(__name__)
+from ingestion.config import settings
 
-ROOT = Path(__file__).parent.parent
-DEFAULT_CSV_PATH = ROOT / "data" / "books.csv"
-DB_PATH = ROOT / "warehouse.duckdb"
+log = logging.getLogger(__name__)
 
 
 def ingest(
     con: duckdb.DuckDBPyConnection | None = None, csv_path: str | Path | None = None
 ) -> None:
-    csv_path = Path(csv_path) if csv_path else DEFAULT_CSV_PATH
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV não encontrado: {csv_path}")
+    csv = Path(csv_path) if csv_path else settings.csv_path
+    if not csv.exists():
+        raise FileNotFoundError(f"CSV não encontrado: {csv}")
     close_after = con is None
     if con is None:
-        log.info("Conectando ao warehouse: %s", DB_PATH)
-        con = duckdb.connect(str(DB_PATH))
+        log.info("Conectando ao warehouse: %s", settings.db_path)
+        con = duckdb.connect(str(settings.db_path))
 
-    log.info("Lendo CSV: %s", csv_path)
+    log.info("Lendo CSV: %s", csv)
     con.execute("CREATE SCHEMA IF NOT EXISTS bronze")
 
     con.execute("DROP TABLE IF EXISTS bronze.books_raw")
@@ -37,7 +35,7 @@ def ingest(
             ignore_errors = true
         )
     """,
-        [csv_path.as_posix()],
+        [csv.as_posix()],
     )
 
     row = con.execute("SELECT count(*) FROM bronze.books_raw").fetchone()

@@ -1,21 +1,18 @@
 import logging
-from pathlib import Path
 
 import duckdb
 
+from ingestion.config import settings
+
 log = logging.getLogger(__name__)
-
-DB_PATH = Path(__file__).parent.parent / "warehouse.duckdb"
-
-EXPORTS_PATH = Path(__file__).parent.parent / "data" / "exports"
 
 
 def build(con: duckdb.DuckDBPyConnection | None = None) -> None:
     close_after = con is None
 
     if con is None:
-        log.info("Conectando ao warehouse: %s", DB_PATH)
-        con = duckdb.connect(str(DB_PATH))
+        log.info("Conectando ao warehouse: %s", settings.db_path)
+        con = duckdb.connect(str(settings.db_path))
 
     con.execute("CREATE SCHEMA IF NOT EXISTS gold")
 
@@ -69,7 +66,7 @@ def build(con: duckdb.DuckDBPyConnection | None = None) -> None:
         )
 
     con.execute(
-        """
+        f"""
         CREATE TABLE gold.top_books AS
         SELECT
             book_id,
@@ -82,7 +79,7 @@ def build(con: duckdb.DuckDBPyConnection | None = None) -> None:
             publisher,
             CURRENT_TIMESTAMP::TIMESTAMP AS loaded_at
         FROM silver.books
-        WHERE ratings_count >= 1000
+        WHERE ratings_count >= {settings.min_ratings_for_top_books}
         ORDER BY average_rating DESC, ratings_count DESC
         """
     )
@@ -91,7 +88,7 @@ def build(con: duckdb.DuckDBPyConnection | None = None) -> None:
 
     cols = [desc[0] for desc in con.execute("DESCRIBE gold.top_books").fetchall()]
 
-    log.info("Top 10 livros por rating (mín. 1000 avaliações):")
+    log.info("Top 10 livros por rating (mín. %d avaliações):", settings.min_ratings_for_top_books)
 
     log.info(
         "  %-45s %10s %12s",
@@ -155,14 +152,14 @@ def build(con: duckdb.DuckDBPyConnection | None = None) -> None:
             f"{data['total_ratings'] or 0:,}",
         )
 
-    EXPORTS_PATH.mkdir(parents=True, exist_ok=True)
+    settings.exports_path.mkdir(parents=True, exist_ok=True)
 
     for table in (
         "top_authors",
         "top_books",
         "books_by_language",
     ):
-        dest = (EXPORTS_PATH / f"{table}.csv").as_posix()
+        dest = (settings.exports_path / f"{table}.csv").as_posix()
 
         con.execute(
             f"""
