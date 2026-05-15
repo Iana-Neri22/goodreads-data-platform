@@ -43,6 +43,11 @@ def transform(con: duckdb.DuckDBPyConnection | None = None) -> None:
             AND TRIM(title) != ''
             AND TRY_CAST(bookid AS INTEGER) IS NOT NULL
             AND TRY_CAST(num_pages AS INTEGER) > 0
+            AND (
+                TRY_CAST(text_reviews_count AS INTEGER) IS NULL
+                OR TRY_CAST(ratings_count AS INTEGER) IS NULL
+                OR TRY_CAST(text_reviews_count AS INTEGER) <= TRY_CAST(ratings_count AS INTEGER)
+            )
         """
     )
 
@@ -88,17 +93,28 @@ def transform(con: duckdb.DuckDBPyConnection | None = None) -> None:
                         THEN 1
                         ELSE 0
                     END
-                ) AS paginas_invalidas
+                ) AS paginas_invalidas,
+
+                SUM(
+                    CASE
+                        WHEN TRY_CAST(text_reviews_count AS INTEGER)
+                             > TRY_CAST(ratings_count AS INTEGER)
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS reviews_inconsistentes
             FROM bronze.books_raw
             """
         ).fetchone()
 
         if reasons is not None:  # pragma: no branch
             log.info(
-                "Motivos: título vazio=%d | id inválido=%d | páginas inválidas=%d",
+                "Motivos: título vazio=%d | id inválido=%d"
+                " | páginas inválidas=%d | reviews inconsistentes=%d",
                 reasons[0],
                 reasons[1],
                 reasons[2],
+                reasons[3],
             )
 
     if close_after:

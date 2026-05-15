@@ -1,8 +1,9 @@
 import duckdb
 import pytest
+from pydantic import ValidationError
 
 from ingestion import bronze, checks, gold, silver
-from ingestion.config import settings
+from ingestion.config import Settings, settings
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +59,9 @@ def test_silver_types(con):
 
 
 def test_quality_checks_pass(con):
-    checks.validate(con)
+    passed, total = checks.validate(con)
+    assert passed == total
+    assert total > 0
 
 
 def test_gold_top_authors(con):
@@ -187,23 +190,158 @@ def test_silver_no_rows_dropped_when_all_valid():
     conn.close()
 
 
-def test_checks_fail_on_invalid_data():
+def _silver_conn(**overrides) -> duckdb.DuckDBPyConnection:
+    """In-memory conn with bronze (1 row) and silver.books (1 valid row).
+
+    Keyword args override silver column SQL value expressions.
+    Bronze always has exactly 1 row so the retention check passes (100%).
+    """
     conn = duckdb.connect(":memory:")
-    conn.execute("CREATE SCHEMA silver")
+    conn.execute("CREATE SCHEMA bronze")
     conn.execute("""
-        CREATE TABLE silver.books (
-            book_id       INTEGER,
-            title         VARCHAR,
-            authors       VARCHAR,
-            average_rating DOUBLE,
-            num_pages     INTEGER,
-            ratings_count INTEGER,
-            publication_date DATE
+        CREATE TABLE bronze.books_raw (
+            bookid VARCHAR, title VARCHAR, authors VARCHAR, average_rating VARCHAR,
+            isbn VARCHAR, isbn13 VARCHAR, language_code VARCHAR, num_pages VARCHAR,
+            ratings_count VARCHAR, text_reviews_count VARCHAR,
+            publication_date VARCHAR, publisher VARCHAR
         )
     """)
     conn.execute("""
-        INSERT INTO silver.books VALUES (1, 'Test', 'Author', 10.0, 100, 50, '2020-01-01')
+        INSERT INTO bronze.books_raw VALUES
+        ('1','Test Book','Author','4.0','0123456789','9780123456789',
+         'eng','300','500','50','01/01/2020','Publisher')
+    """)
+    conn.execute("CREATE SCHEMA silver")
+    conn.execute("""
+        CREATE TABLE silver.books (
+            book_id            INTEGER,
+            title              VARCHAR,
+            authors            VARCHAR,
+            average_rating     DOUBLE,
+            isbn               VARCHAR,
+            isbn13             VARCHAR,
+            language_code      VARCHAR,
+            num_pages          INTEGER,
+            ratings_count      INTEGER,
+            text_reviews_count INTEGER,
+            publication_date   DATE,
+            publisher          VARCHAR,
+            loaded_at          TIMESTAMP
+        )
+    """)
+    row = {
+        "book_id": "1",
+        "title": "'Test Book'",
+        "authors": "'Author'",
+        "average_rating": "4.0",
+        "isbn": "'0123456789'",
+        "isbn13": "'9780123456789'",
+        "language_code": "'eng'",
+        "num_pages": "300",
+        "ratings_count": "500",
+        "text_reviews_count": "50",
+        "publication_date": "'2020-01-01'",
+        "publisher": "'Publisher'",
+        "loaded_at": "NOW()",
+    }
+    row.update(overrides)
+    conn.execute(f"INSERT INTO silver.books VALUES ({', '.join(row.values())})")
+    return conn
+
+
+def test_checks_fail_on_invalid_data():
+    conn = _silver_conn(average_rating="10.0")
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
+
+
+def test_checks_fail_on_silver_empty():
+    conn = duckdb.connect(":memory:")
+    conn.execute("CREATE SCHEMA bronze")
+    conn.execute("CREATE TABLE bronze.books_raw (bookid VARCHAR)")
+    conn.execute("INSERT INTO bronze.books_raw VALUES ('1')")
+    conn.execute("CREATE SCHEMA silver")
+    conn.execute("""
+        CREATE TABLE silver.books (
+            book_id            INTEGER,
+            title              VARCHAR,
+            authors            VARCHAR,
+            average_rating     DOUBLE,
+            isbn               VARCHAR,
+            isbn13             VARCHAR,
+            language_code      VARCHAR,
+            num_pages          INTEGER,
+            ratings_count      INTEGER,
+            text_reviews_count INTEGER,
+            publication_date   DATE,
+            publisher          VARCHAR,
+            loaded_at          TIMESTAMP
+        )
     """)
     with pytest.raises(ValueError):
         checks.validate(conn)
     conn.close()
+
+
+def test_checks_fail_on_low_retention():
+    conn = duckdb.connect(":memory:")
+    conn.execute("CREATE SCHEMA bronze")
+    conn.execute("CREATE TABLE bronze.books_raw (bookid VARCHAR)")
+    for i in range(10):
+        conn.execute(f"INSERT INTO bronze.books_raw VALUES ('{i}')")
+    conn.execute("CREATE SCHEMA silver")
+    conn.execute("""
+        CREATE TABLE silver.books (
+            book_id INTEGER, title VARCHAR, authors VARCHAR,
+            average_rating DOUBLE, isbn VARCHAR, isbn13 VARCHAR,
+            language_code VARCHAR, num_pages INTEGER, ratings_count INTEGER,
+            text_reviews_count INTEGER, publication_date DATE,
+            publisher VARCHAR, loaded_at TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        INSERT INTO silver.books VALUES
+        (1,'Book','Author',4.0,'0123456789','9780123456789','eng',
+         300,500,50,'2020-01-01','Pub',NOW())
+    """)
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
+
+
+def test_checks_fail_on_authors_empty():
+    conn = _silver_conn(authors="NULL")
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
+
+
+def test_checks_fail_on_reviews_exceed_ratings():
+    conn = _silver_conn(text_reviews_count="600", ratings_count="500")
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
+
+
+def test_checks_fail_on_invalid_isbn13_length():
+    conn = _silver_conn(isbn13="'978012'")
+    with pytest.raises(ValueError):
+        checks.validate(conn)
+    conn.close()
+
+
+def test_settings_rejects_retention_out_of_range():
+    with pytest.raises(ValidationError):
+        Settings(min_silver_retention_pct=80.0)
+
+    with pytest.raises(ValidationError):
+        Settings(min_silver_retention_pct=0.0)
+
+
+def test_settings_rejects_min_ratings_not_positive():
+    with pytest.raises(ValidationError):
+        Settings(min_ratings_for_top_books=0)
+
+    with pytest.raises(ValidationError):
+        Settings(min_ratings_for_top_books=-1)

@@ -4,6 +4,7 @@ import sys
 import time
 from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
+from typing import cast
 
 import duckdb
 
@@ -32,7 +33,7 @@ root_logger.addHandler(file_handler)
 
 log = logging.getLogger(__name__)
 
-ALL_STEPS: dict[str, Callable[..., None]] = {
+ALL_STEPS: dict[str, Callable[..., object]] = {
     "bronze": bronze.ingest,
     "silver": silver.transform,
     "checks": checks.validate,
@@ -47,6 +48,7 @@ def run(
 
     db = db_path or str(settings.db_path)
     start_total = time.time()
+    checks_summary: tuple[int, int] | None = None
 
     log.info("Etapas selecionadas: %s", ", ".join(steps))
     log.info("Conectando ao warehouse: %s", db)
@@ -59,13 +61,15 @@ def run(
 
             if name == "bronze" and csv_path:
                 fn(con, csv_path)
+            elif name == "checks":
+                checks_summary = cast("tuple[int, int]", fn(con))
             else:
                 fn(con)
 
             elapsed = time.time() - start_step
             log.info("=== Etapa %s concluída em %.1fs ===", name, elapsed)
 
-        _print_summary(con, steps, time.time() - start_total)
+        _print_summary(con, steps, time.time() - start_total, checks_summary)
 
 
 def _count(con: duckdb.DuckDBPyConnection, query: str) -> int | None:
@@ -78,8 +82,9 @@ def _count(con: duckdb.DuckDBPyConnection, query: str) -> int | None:
 
 def _print_summary(
     con: duckdb.DuckDBPyConnection,
-    steps: dict[str, Callable[..., None]],
+    steps: dict[str, Callable[..., object]],
     elapsed: float,
+    checks_summary: tuple[int, int] | None = None,
 ) -> None:
     log.info("")
     log.info("╔══════════════════════════════════╗")
@@ -125,7 +130,11 @@ def _print_summary(
 
     if "checks" in steps:
         log.info("╠══════════════════════════════════╣")
-        log.info("║  verificações             6/6 OK  ║")
+        if checks_summary is not None:
+            passed, total = checks_summary
+            log.info("║  verificações        %3d/%3d OK  ║", passed, total)
+        else:
+            log.info("║  verificações                OK  ║")
 
     log.info("╠══════════════════════════════════╣")
     log.info("║  tempo total          %9.2fs  ║", elapsed)
