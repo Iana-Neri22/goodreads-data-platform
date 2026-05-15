@@ -16,6 +16,9 @@ dashboard = [
     "streamlit>=1.45.0",
     "plotly>=6.0.0",
 ]
+prefect = [
+    "prefect>=3.0",
+]
 dev = [
     "pytest==9.0.3",
     "pytest-cov==6.1.0",
